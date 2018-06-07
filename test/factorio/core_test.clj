@@ -19,18 +19,23 @@
     {:in in :out out}))
 
 (defn read-with-timeout [c]
-  (let [[value channel] (alts!! [c (timeout 1000)])]
-    (if (= channel c)
+  (let [out (:out c)
+        [value channel] (alts!! [out (timeout 1000)])]
+    (if (= channel out)
       value
       (throw (AssertionError. "Timeout")))))
 
+(defn give-component [c v]
+  (>!! (:in c) v))
+
+(defn connect [c1 c2]
+  (pipe (:out c1) (:in c2)))
+
 (deftest commponent-test
   (testing "components"
-    (let [{p-in :in
-           p-out :out} (component plus-one)
-          {t-in :in
-           t-out :out} (component times-n {:m 5})
-          _ (>!! p-in {:n 1})
-          _ (pipe p-out t-in)
-          multed (read-with-timeout t-out)]
+    (let [p (component plus-one)
+          t (component times-n {:m 5})
+          _ (give-component p {:n 1})
+          _ (connect p t)
+          multed (read-with-timeout t)]
       (is (= {:n 10} multed)))))
