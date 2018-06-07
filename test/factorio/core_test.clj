@@ -1,13 +1,13 @@
 (ns factorio.core-test
   (:require [clojure.test :refer :all]
-            [clojure.core.async :refer [chan <! >! >!! timeout alts!! go-loop go]]
+            [clojure.core.async :refer [pipe chan <! >! >!! timeout alts!! go-loop go]]
             [factorio.core :refer :all]))
 
 (defn plus-one [{:keys [n]}]
-  (+ n 1))
+  {:n (+ n 1)})
 
 (defn times-n [{:keys [m n]}]
-  (* m n))
+  {:n (* m n)})
 
 (defn component [meat & [cfg]]
   (let [in (chan)
@@ -31,8 +31,6 @@
           {t-in :in
            t-out :out} (component times-n {:m 5})
           _ (>!! p-in {:n 1})
-          added (read-with-timeout p-out)
-          _ (>!! t-in {:n added})
+          _ (pipe p-out t-in)
           multed (read-with-timeout t-out)]
-      (is (= 2 added))
-      (is (= 10 multed)))))
+      (is (= {:n 10} multed)))))
