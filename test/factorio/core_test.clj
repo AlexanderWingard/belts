@@ -9,6 +9,9 @@
 (defn times-n [{:keys [m n]}]
   {:n (* m n)})
 
+(defn state-component [{:keys [state]}]
+  {:n (swap! state inc)})
+
 (defn component [meat & [cfg]]
   (let [in (chan)
         out (chan)]
@@ -38,4 +41,12 @@
           _ (give-component p {:n 1})
           _ (connect p t)
           multed (read-with-timeout t)]
-      (is (= {:n 10} multed)))))
+      (is (= {:n 10} multed))))
+  (testing "stateful component"
+    (let [c (component state-component {:state (atom 0)})
+          _ (give-component c {})
+          s1 (read-with-timeout c)
+          _ (give-component c {})
+          s2 (read-with-timeout c)]
+      (is (= {:n 1} s1))
+      (is (= {:n 2} s2)))))
