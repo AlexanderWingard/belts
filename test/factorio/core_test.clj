@@ -1,77 +1,68 @@
 (ns factorio.core-test
   (:require [clojure.test :refer :all]
             [clojure.core.match :refer [match]]
-            [clojure.core.async :refer [pipe chan <!! <! >! >!! timeout alts!! go-loop go]]
+            [clojure.core.async :refer [close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go]]
             [factorio.core :refer :all]))
 
-(defn plus-one [{:keys [n]}]
-  {:n (+ n 1)})
+(defn throw-timeout []
+  (throw (AssertionError. "Timeout")))
 
 (defn times-n [{:keys [m n]}]
+  "A component that multiplies m and n"
   {:n (* m n)})
 
-(defn state-component [{:keys [state]}]
-  {:n (swap! state inc)})
-
-(defn rpc-able [{:keys [state] :as msg}]
-  (match [msg]
-         [{:rpc "get" :from from}] (>!! from @state)
-         [{:rpc "set" :from from :val v}] (>!! from (reset! state v)))
-  nil)
+(defn state-adder [{:keys [state] :as msg}]
+  "A component that keeps state and handles RPC"
+  (match
+   msg
+    {:rpc "get"} {:n @state}
+    {:rpc "set" :val v} {:n (reset! state v)}
+    {:n n} {:n (+ @state n)}))
 
 (defn component [meat & [cfg]]
   (let [in (chan)
-        out (chan)]
+        out (chan)
+        backdoor (chan)]
     (go-loop []
-      (when-let [msg (<! in)]
+      (let [[msg c] (alts! [in backdoor])
+            return-to (if (= c in) out (:from msg))]
         (when-let [return (meat (merge cfg msg))]
-          (>! out return))
-        (recur)))
-    {:in in :out out}))
+          (>! return-to return)))
+      (recur))
+    {:in in :out out :backdoor backdoor}))
 
-(defn read-with-timeout [c]
-  (let [out (:out c)
+(defn read-with-timeout [compo]
+  (let [out (:out compo)
         [value channel] (alts!! [out (timeout 10)])]
     (if (= channel out)
       value
-      (throw (AssertionError. "Timeout")))))
+      (throw-timeout))))
 
-(defn give-component [c v]
-  (>!! (:in c) v))
+(defn put-with-timeout [compo v]
+  (let [out (go (>! (:in compo) v))
+        [value channel] (alts!! [out (timeout 10)])]
+    (if (not= channel out)
+      (throw-timeout))))
 
-(defn connect [c1 c2]
-  (pipe (:out c1) (:in c2)))
+(defn connect [from-compo to-compo]
+  (pipe (:out from-compo) (:in to-compo)))
 
-(defn rpc [c rpc & [extra]]
+(defn rpc [compo args]
   (let [self (chan)
-        msg (merge {:rpc rpc :from self} extra)
-        _ (give-component c msg)]
+        msg (assoc args :from self)
+        _ (>!! (:backdoor compo) msg)]
     (<!! self)))
 
-(deftest commponent-test
+(deftest compo-test
   (testing "components"
-    (let [p (component plus-one)
-          t (component times-n {:m 5})
-          _ (give-component p {:n 1})
-          _ (connect p t)
-          multed (read-with-timeout t)]
-      (is (= {:n 10} multed))))
-
-  (testing "stateful component"
-    (let [c  (component state-component {:state (atom 0)})
-          _  (give-component c {})
-          s1 (read-with-timeout c)
-          _  (give-component c {})
-          s2 (read-with-timeout c)]
-      (is (= {:n 1} s1))
-      (is (= {:n 2} s2))))
-
-  (testing "rpc-able component"
-    (let [self (chan)
-          c  (component rpc-able {:state (atom "red")})
-          v1 (rpc c "get")
-          _  (rpc c "set" {:val "blue"})
-          v2 (rpc c "get")]
-      (is (= "red" v1))
-      (is (= "blue" v2))
-      (is (thrown? AssertionError (read-with-timeout c))))))
+    (let [first  (component state-adder {:state (atom 10)})
+          second (component times-n {:m 2})
+          _  (connect first second)
+          v1 (rpc first {:rpc "get"})
+          _  (rpc first {:rpc "set" :val 20})
+          v2 (rpc first {:rpc "get"})
+          _  (put-with-timeout first {:n 10})
+          v3 (read-with-timeout second)]
+      (is (= {:n 10} v1))    ;; Initial state
+      (is (= {:n 20} v2))    ;; After set
+      (is (= {:n 60} v3))))) ;; (20 + 10) * 2
