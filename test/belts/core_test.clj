@@ -1,7 +1,7 @@
 (ns belts.core-test
   (:require [clojure.test :refer :all]
             [clojure.core.match :refer [match]]
-            [clojure.core.async :refer [close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]]
+            [clojure.core.async :refer [onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]]
             [belts.core :refer :all]))
 
 (defn times-n [{:keys [m n]}]
@@ -15,6 +15,11 @@
     {:rpc "get"} {:n @state}
     {:rpc "set" :val v} {:n (reset! state v)}
     {:n n} {:n (+ @state n)}))
+
+(defn multi-answer [msg]
+  (let [result (chan)]
+    (onto-chan result [{:n 1} {:n 2}])
+    result))
 
 (deftest compo-test
   (testing "components"
@@ -39,4 +44,9 @@
         (is (thrown? AssertionError (put-with-timeout first {:n 10}))))
       (mult (:out second))
       (dotimes [n 3]
-        (put-with-timeout first {:n 10})))))
+        (put-with-timeout first {:n 10}))))
+  (testing "multi answer"
+    (let [ma (component multi-answer)]
+      (put-with-timeout ma {})
+      (is (= {:n 1} (read-with-timeout ma)))
+      (is (= {:n 2} (read-with-timeout ma))))))

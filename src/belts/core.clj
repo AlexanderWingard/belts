@@ -1,6 +1,10 @@
 (ns belts.core
   (:require [clojure.core.async :refer [close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]]))
 
+(defn channel?
+  [x]
+  (satisfies? clojure.core.async.impl.protocols/Channel x))
+
 (defn component [meat & [cfg]]
   (let [in (chan)
         out (chan)]
@@ -8,8 +12,9 @@
       (let [msg (<! in)
             return (meat (merge cfg msg))
             return-to (get msg ::from out)]
-        (when (some? return)
-          (>! return-to return)))
+        (cond
+          (channel? return) (pipe return return-to)
+          (some? return) (>! return-to return)))
       (recur))
     {:in in :out out}))
 
