@@ -37,7 +37,8 @@
 (defn graph [g]
   (doseq [[from to] g]
     (pipe (:out from) (:in to)))
-  g)
+  {:in (:in (first (first g)))
+   :out (:out (last (last g)))})
 
 (defn rpc [compo args]
   (let [self (chan)

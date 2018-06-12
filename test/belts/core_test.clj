@@ -39,12 +39,12 @@
           second (component times-n {:m 2})
           g (graph [[first second]])]
       (dotimes [n 3]
-        (put-with-timeout first {:n 10}))
+        (put-with-timeout g {:n 10}))
       (dotimes [n 3]
-        (is (thrown? AssertionError (put-with-timeout first {:n 10}))))
+        (is (thrown? AssertionError (put-with-timeout g {:n 10}))))
       (mult (:out second))
       (dotimes [n 3]
-        (put-with-timeout first {:n 10}))))
+        (put-with-timeout g {:n 10}))))
   (testing "multi answer"
     (let [ma (component multi-answer)]
       (put-with-timeout ma {})
