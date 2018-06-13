@@ -49,4 +49,17 @@
     (let [ma (component multi-answer)]
       (put-with-timeout ma {})
       (is (= {:n 1} (read-with-timeout ma)))
-      (is (= {:n 2} (read-with-timeout ma))))))
+      (is (= {:n 2} (read-with-timeout ma)))))
+  (testing "cloner"
+    (let [t (component times-n {:m 2})
+          c (cloner)
+          t1 (echo)
+          t2 (echo)
+          g (graph [[t c]
+                    [c t1]
+                    [c t2]])]
+      (put-with-timeout g {:n 1})
+      (is (= {:n 2} (read-with-timeout t1)))
+      (is (= {:n 2} (read-with-timeout t2))))))
+
+

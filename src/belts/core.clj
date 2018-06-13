@@ -36,16 +36,19 @@
 
 (defn graph [g]
   (doseq [[from to] g]
-    (pipe (:out from) (:in to)))
-  {:in (:in (first (first g)))
-   :out (:out (last (last g)))})
+    (cond
+      (contains? from :mult) (tap (:mult from) (:in to))
+      (contains? from :out) (pipe (:out from) (:in to))))
+  {:in (:in (first (first g))) :out (:out (last (last g)))})
 
-(defn splitter [{:keys [in out]}]
-  (let [m (mult out)]
-    ((fn create-tap []
-       {:in in
-        :out (tap m (chan))
-        :create-tap create-tap}))))
+(defn cloner []
+  (let [in (chan)
+        m (mult in)]
+    {:in in :mult m}))
+
+(defn echo []
+  (let [c (chan)]
+    {:in c :out c}))
 
 (defn rpc [compo args]
   (let [self (chan)
