@@ -1,5 +1,5 @@
 (ns belts.core
-  (:require [clojure.core.async :refer [close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]]))
+  (:require [clojure.core.async :refer [close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]))
 
 (defn channel?
   [x]
@@ -39,6 +39,13 @@
     (pipe (:out from) (:in to)))
   {:in (:in (first (first g)))
    :out (:out (last (last g)))})
+
+(defn splitter [{:keys [in out]}]
+  (let [m (mult out)]
+    ((fn create-tap []
+       {:in in
+        :out (tap m (chan))
+        :create-tap create-tap}))))
 
 (defn rpc [compo args]
   (let [self (chan)
