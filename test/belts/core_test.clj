@@ -4,11 +4,11 @@
             [clojure.core.async :refer [onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]]
             [belts.core :refer :all]))
 
-(defn times-n [{:keys [m n]}]
+(defn times-m [{:keys [n]} {:keys [m]}]
   "A component that multiplies m and n"
   {:n (* m n)})
 
-(defn state-adder [{:keys [state] :as msg}]
+(defn state-adder [msg {:keys [state]}]
   "A component that keeps state and handles RPC"
   (match
    msg
@@ -24,7 +24,7 @@
 (deftest compo-test
   (testing "components"
     (let [first  (component state-adder {:state (atom 10)})
-          second (component times-n {:m 2})
+          second (component times-m {:m 2})
           _  (graph [[first second]])
           v1 (rpc first {:rpc "get"})
           _  (rpc first {:rpc "set" :val 20})
@@ -36,7 +36,7 @@
       (is (= {:n 60} v3))))  ;; (20 + 10) * 2
   (testing "graph"
     (let [first  (component state-adder {:state (atom 10)})
-          second (component times-n {:m 2})
+          second (component times-m {:m 2})
           g (graph [[first second]])]
       (dotimes [n 3]
         (put-with-timeout g {:n 10}))
@@ -51,7 +51,7 @@
       (is (= {:n 1} (read-with-timeout ma)))
       (is (= {:n 2} (read-with-timeout ma)))))
   (testing "cloner"
-    (let [t (component times-n {:m 2})
+    (let [t (component times-m {:m 2})
           c (cloner)
           t1 (echo)
           t2 (echo)

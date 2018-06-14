@@ -10,7 +10,10 @@
         out (chan)]
     (go-loop []
       (let [msg (<! in)
-            return (meat (merge cfg (dissoc msg ::from)))
+            msg-wo-from (dissoc msg ::from)
+            return (if (some? cfg)
+                     (meat msg-wo-from cfg)
+                     (meat msg-wo-from))
             return-to (get msg ::from out)]
         (cond
           (channel? return) (pipe return return-to)
