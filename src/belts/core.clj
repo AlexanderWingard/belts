@@ -42,7 +42,11 @@
     (cond
       (contains? from :mult) (tap (:mult from) (:in to))
       (contains? from :out) (pipe (:out from) (:in to))))
-  {:in (:in (first (first g))) :out (:out (last (last g)))})
+  (let [f (first (first g))
+        l (last (last g))]
+    (if (contains? l :mult)
+      {:in (:in f) :mult (:mult l)}
+      {:in (:in f) :out (:out l)})))
 
 (defn cloner []
   (let [in (chan)

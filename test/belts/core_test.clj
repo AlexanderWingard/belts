@@ -60,6 +60,11 @@
                     [c t2]])]
       (put-with-timeout g {:n 1})
       (is (= {:n 2} (read-with-timeout t1)))
-      (is (= {:n 2} (read-with-timeout t2))))))
-
-
+      (is (= {:n 2} (read-with-timeout t2)))))
+  (testing "cloner at the end"
+    (let [g (graph [[(echo) (cloner)]])]
+      (dotimes [n 10]
+        (put-with-timeout g {:n 10}))
+      (let [g2 (graph [[g (echo)]])]
+        (put-with-timeout g2 {:n 10})
+        (is (= {:n 10} (read-with-timeout g2)))))))
