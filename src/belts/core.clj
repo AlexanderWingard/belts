@@ -1,5 +1,5 @@
 (ns belts.core
-  (:require [clojure.core.async :refer [close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]))
+  (:require [clojure.core.async :refer [onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]))
 
 (defn channel?
   [x]
@@ -20,7 +20,7 @@
                      (meat msg-wo-from))
             return-to (get msg ::from out)]
         (cond
-          (channel? return) (pipe return return-to)
+          (channel? return) (pipe return return-to false)
           (some? return) (>! return-to return)))
       (recur))
     {:in in :out out}))
@@ -64,3 +64,8 @@
         msg (assoc args ::from self)]
     (put-with-timeout compo msg)
     (read-with-timeout {:out self})))
+
+(defn multi-out [coll]
+  (let [out (chan)]
+    (onto-chan out coll)
+    out))

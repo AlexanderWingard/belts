@@ -17,9 +17,7 @@
     {:n n} {:n (+ @state n)}))
 
 (defn multi-answer [msg]
-  (let [result (chan)]
-    (onto-chan result [{:n 1} {:n 2}])
-    result))
+  (multi-out [{:n 1} {:n 2}]))
 
 (deftest compo-test
   (testing "components"
