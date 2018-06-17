@@ -43,7 +43,7 @@
 
 (defn graph [g]
   (doseq [[from to] g]
-    ((if (mult? (:out from)) tap pipe) (:out from) (:in to)))
+    ((if (mult? (:out from)) tap pipe) (:out from) (:in to) false))
   {:in (:in (first (first g))) :out (:out (last (last g)))})
 
 (defn dead-end [{:keys [out] :as c}]

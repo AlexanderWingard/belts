@@ -62,9 +62,14 @@
       (is (= {:n 2} (read-with-timeout t1)))
       (is (= {:n 2} (read-with-timeout t2)))))
   (testing "dead end"
-    (let [c (dead-end (echo))]
-      (dotimes [n 3]
-        (put-with-timeout c {:n 10}))))
+    (let [c1 (echo)
+          c2 (echo)
+          g (graph [[c1 c2]])]
+      (put-with-timeout c1 {:n 10})
+      (is (= {:n 10} (read-with-timeout c2)))
+      (dead-end c1)
+      (dotimes [n 30]
+        (put-with-timeout c1 {:n 10}))))
   (testing "cloner at the end"
     (let [g (graph [[(echo) (cloner)]])]
       (dotimes [n 10]
