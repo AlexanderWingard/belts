@@ -46,6 +46,10 @@
     ((if (mult? (:out from)) tap pipe) (:out from) (:in to)))
   {:in (:in (first (first g))) :out (:out (last (last g)))})
 
+(defn dead-end [{:keys [out] :as c}]
+  (close! out)
+  c)
+
 (defn cloner []
   (let [in (chan)
         m (mult in)]
