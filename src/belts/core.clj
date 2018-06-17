@@ -5,6 +5,10 @@
   [x]
   (satisfies? clojure.core.async.impl.protocols/Channel x))
 
+(defn mult?
+  [x]
+  (satisfies? clojure.core.async/Mult x))
+
 (defn component [meat & [cfg]]
   (let [in (chan)
         out (chan)]
@@ -39,19 +43,13 @@
 
 (defn graph [g]
   (doseq [[from to] g]
-    (cond
-      (contains? from :mult) (tap (:mult from) (:in to))
-      (contains? from :out) (pipe (:out from) (:in to))))
-  (let [f (first (first g))
-        l (last (last g))]
-    (if (contains? l :mult)
-      {:in (:in f) :mult (:mult l)}
-      {:in (:in f) :out (:out l)})))
+    ((if (mult? (:out from)) tap pipe) (:out from) (:in to)))
+  {:in (:in (first (first g))) :out (:out (last (last g)))})
 
 (defn cloner []
   (let [in (chan)
         m (mult in)]
-    {:in in :mult m}))
+    {:in in :out m}))
 
 (defn echo []
   (let [c (chan)]
