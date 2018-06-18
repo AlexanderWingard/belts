@@ -42,7 +42,8 @@
       (throw-timeout))))
 
 (defn graph [g]
-  (doseq [[from to] g]
+  (doseq [thread g
+          [from to] (partition 2 1 thread)]
     ((if (mult? (:out from)) tap pipe) (:out from) (:in to) false))
   {:in (:in (first (first g))) :out (:out (last (last g)))})
 

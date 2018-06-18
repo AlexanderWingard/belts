@@ -74,4 +74,8 @@
         (put-with-timeout g {:n 10}))
       (let [g2 (graph [[g (echo)]])]
         (put-with-timeout g2 {:n 10})
-        (is (= {:n 10} (read-with-timeout g2)))))))
+        (is (= {:n 10} (read-with-timeout g2))))))
+  (testing "thread graphs"
+    (let [g (graph [[(echo) (component times-m {:m 2}) (echo)]])]
+      (put-with-timeout g {:n 10})
+      (is (= {:n 20} (read-with-timeout g))))))
