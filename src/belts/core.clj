@@ -51,6 +51,9 @@
   (close! out)
   c)
 
+(defn printer []
+  (component (fn [msg] (println msg) msg)))
+
 (defn cloner []
   (let [in (chan)
         m (mult in)]
