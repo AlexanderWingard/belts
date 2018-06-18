@@ -69,7 +69,6 @@
     (go-loop []
       (>! out (<! in))
       (<! (timeout 1000))
-      (println "timeout")
       (recur))
     {:in in :out out}))
 

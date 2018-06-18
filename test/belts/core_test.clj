@@ -78,4 +78,12 @@
   (testing "thread graphs"
     (let [g (graph [[(echo) (component times-m {:m 2}) (echo)]])]
       (put-with-timeout g {:n 10})
-      (is (= {:n 20} (read-with-timeout g))))))
+      (is (= {:n 20} (read-with-timeout g)))))
+  (testing "debouncer"
+    (let [c (component (fn [msg] (multi-out (for [x (range 10)] {:n x}))))
+          d (debouncer)
+          g (graph [[c d]])]
+      (put-with-timeout g {})
+      (is (= {:n 0} (read-with-timeout g)))
+      (<!! (timeout 1500))
+      (is (= {:n 9} (read-with-timeout g))))))
