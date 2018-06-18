@@ -1,5 +1,5 @@
 (ns belts.core
-  (:require [clojure.core.async :refer [onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]))
+  (:require [clojure.core.async :refer [sliding-buffer onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]))
 
 (defn channel?
   [x]
@@ -58,6 +58,16 @@
 (defn echo []
   (let [c (chan)]
     {:in c :out c}))
+
+(defn debouncer []
+  (let [in (chan (sliding-buffer 1))
+        out (chan)]
+    (go-loop []
+      (>! out (<! in))
+      (<! (timeout 1000))
+      (println "timeout")
+      (recur))
+    {:in in :out out}))
 
 (defn rpc [compo args]
   (let [self (chan)
