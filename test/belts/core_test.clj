@@ -16,6 +16,9 @@
     {:rpc "set" :val v} {:n (reset! state v)}
     {:n n} {:n (+ @state n)}))
 
+(defn accer [msg {:keys [state]}]
+  (swap! state conj msg))
+
 (defn multi-answer [msg]
   (multi-out [{:n 1} {:n 2}]))
 
@@ -82,8 +85,9 @@
   (testing "debouncer"
     (let [c (component (fn [msg] (multi-out (for [x (range 10)] {:n x}))))
           d (debouncer)
-          g (graph [[c d]])]
+          a (component accer {:state (atom [])})
+          g (graph [[c d a]])]
       (put-with-timeout g {})
-      (is (= {:n 0} (read-with-timeout g)))
-      (<!! (timeout 1500))
-      (is (= {:n 9} (read-with-timeout g))))))
+      (is (= [{:n 0}] (read-with-timeout a)))
+      (<!! (timeout 1000))
+      (is (= [{:n 0} {:n 9}] (read-with-timeout a))))))
