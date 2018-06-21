@@ -63,12 +63,12 @@
   (let [c (chan)]
     {:in c :out c}))
 
-(defn debouncer []
+(defn debouncer [interval]
   (let [in (chan (sliding-buffer 1))
         out (chan)]
     (go-loop []
       (>! out (<! in))
-      (<! (timeout 1000))
+      (<! (timeout interval))
       (recur))
     {:in in :out out}))
 

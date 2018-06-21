@@ -84,10 +84,10 @@
       (is (= {:n 20} (read-with-timeout g)))))
   (testing "debouncer"
     (let [c (component (fn [msg] (multi-out (for [x (range 10)] {:n x}))))
-          d (debouncer)
+          d (debouncer 100)
           a (component accer {:state (atom [])})
           g (graph [[c d a]])]
       (put-with-timeout g {})
       (is (= [{:n 0}] (read-with-timeout a)))
-      (<!! (timeout 1000))
+      (<!! (timeout 100))
       (is (= [{:n 0} {:n 9}] (read-with-timeout a))))))
