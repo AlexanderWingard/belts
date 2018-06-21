@@ -72,6 +72,14 @@
       (recur))
     {:in in :out out}))
 
+(defn ticker [interval]
+  (let [c (chan)]
+    (go-loop [n 0]
+      (>! c {:tick n})
+      (<! (timeout interval))
+      (recur (inc n)))
+    {:in c :out c}))
+
 (defn rpc [compo args]
   (let [self (chan)
         msg (assoc args ::from self)]
