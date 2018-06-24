@@ -41,6 +41,9 @@
     (if (not= channel out)
       (throw-timeout))))
 
+(defn give-coll-to-component [compo coll]
+  (<!! (onto-chan (:in compo) coll false)))
+
 (defn graph [g]
   (doseq [thread g
           [from to] (partition 2 1 thread)]
