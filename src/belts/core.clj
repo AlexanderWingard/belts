@@ -13,17 +13,22 @@
   (let [in (chan)
         out (chan)]
     (go-loop []
-      (let [msg (<! in)
-            msg-wo-from (dissoc msg ::from)
-            return (if (some? cfg)
-                     (meat msg-wo-from cfg)
-                     (meat msg-wo-from))
-            return-to (get msg ::from out)]
-        (cond
-          (channel? return) (pipe return return-to false)
-          (some? return) (>! return-to return)))
-      (recur))
+      (when-let [msg (<! in)]
+        (let [msg-wo-from (dissoc msg ::from)
+              return (if (some? cfg)
+                       (meat msg-wo-from cfg)
+                       (meat msg-wo-from))
+              return-to (get msg ::from out)]
+          (cond
+            (channel? return) (pipe return return-to false)
+            (some? return) (>! return-to return)))
+        (recur)))
     {:in in :out out}))
+
+(defn shutdown [{:keys [in out] :as c}]
+  (close! in)
+  (close! out)
+  c)
 
 (defn throw-timeout []
   (throw (AssertionError. "Timeout")))
