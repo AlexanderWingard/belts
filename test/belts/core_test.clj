@@ -1,6 +1,5 @@
 (ns belts.core-test
   (:require [clojure.test :refer :all]
-            [clojure.core.match :refer [match]]
             [clojure.core.async :refer [onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]]
             [belts.core :refer :all]))
 
@@ -8,13 +7,11 @@
   "A component that multiplies m and n"
   {:n (* m n)})
 
-(defn state-adder [msg {:keys [state]}]
+(defn state-adder [{:keys [rpc n]} {:keys [state]}]
   "A component that keeps state and handles RPC"
-  (match
-   msg
-    {:rpc "get"} {:n @state}
-    {:rpc "set" :val v} {:n (reset! state v)}
-    {:n n} {:n (+ @state n)}))
+  (cond (= "get" rpc) {:n @state}
+        (= "set" rpc) {:n (reset! state n)}
+        :else {:n (+ @state n)}))
 
 (defn accer [msg {:keys [state]}]
   (swap! state conj msg))
@@ -28,7 +25,7 @@
           second (component times-m {:m 2})
           _  (graph [[first second]])
           v1 (rpc first {:rpc "get"})
-          _  (rpc first {:rpc "set" :val 20})
+          _  (rpc first {:rpc "set" :n 20})
           v2 (rpc first {:rpc "get"})
           _  (put-with-timeout first {:n 10})
           v3 (read-with-timeout second)]
