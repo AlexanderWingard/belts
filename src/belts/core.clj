@@ -1,5 +1,6 @@
 (ns belts.core
-  (:require [clojure.core.async :refer [sliding-buffer onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]))
+  (:require [clojure.core.async :refer [sliding-buffer onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]
+            [clojure.spec.alpha :as s]))
 
 (defn channel?
   [x]
@@ -9,16 +10,34 @@
   [x]
   (satisfies? clojure.core.async/Mult x))
 
+(s/def ::chan channel?)
+(s/def ::mult mult?)
+(s/def ::port (s/or :chan ::chan
+                    :mult ::mult))
+(s/def ::in ::chan)
+(s/def ::out ::port)
+(s/def ::component (s/keys :req-un [::in ::out]))
+(s/def ::msg-in map?)
+(s/def ::msg-out (s/or :map map?
+                       :chan ::chan
+                       :nil nil?))
+
+(defn validate [spec val & extra]
+  (if-not (s/valid? spec val)
+    (throw (AssertionError. (str (s/explain-str spec val) extra)))))
+
 (defn component [meat & [cfg]]
   (let [in (chan)
         out (chan)]
     (go-loop []
       (when-let [msg (<! in)]
+        (validate ::msg-in msg meat)
         (let [msg-wo-from (dissoc msg ::from)
               return (if (some? cfg)
                        (meat msg-wo-from cfg)
                        (meat msg-wo-from))
               return-to (get msg ::from out)]
+          (validate ::msg-out return meat)
           (cond
             (channel? return) (pipe return return-to false)
             (some? return) (>! return-to return)))
@@ -52,6 +71,8 @@
 (defn graph [g]
   (doseq [thread g
           [from to] (partition 2 1 thread)]
+    (validate ::component from)
+    (validate ::component to)
     ((if (mult? (:out from)) tap pipe) (:out from) (:in to) false))
   {:in (:in (first (first g))) :out (:out (last (last g)))})
 
