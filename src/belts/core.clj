@@ -89,8 +89,7 @@
     {:in in :out m}))
 
 (defn echo []
-  (let [c (chan)]
-    {:in c :out c}))
+  (component identity))
 
 (defn debouncer [interval]
   (let [in (chan (sliding-buffer 1))
