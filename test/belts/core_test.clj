@@ -20,6 +20,9 @@
 (defn multi-answer [msg]
   (multi-out [{:n 1} {:n 2}]))
 
+(defn inc-meat [msg {:keys [state]}]
+  {:n (swap! state inc)})
+
 (defn c-put [c msg]
   (as/>!! (:in c) msg))
 
@@ -76,8 +79,21 @@
           (is (= {:n 20} (c-take g)))))
   (testing "debouncer"
         (let [c (component (fn [msg] (multi-out (for [x (range 10)] {:n x}))))
-              d (debouncer 10)
+              d (debouncer 1)
               g (graph [[c d]])]
           (c-put g {})
           (is (= {:n 0} (c-take g)))
-          (is (= {:n 9} (c-take g))))))
+          (is (= {:n 9} (c-take g)))))
+  (testing "fun-cache"
+    (let [c (component inc-meat {:state (atom 0)})
+          fc (fun-cache c)]
+      (c-put c {})
+      (is (= {:n 1} (c-take c)))
+      (c-put c {})
+      (is (= {:n 2} (c-take c)))
+      (c-put fc {})
+      (is (= {:n 3} (c-take fc)))
+      (c-put fc {})
+      (is (= {:n 3} (c-take fc)))
+      (c-put fc {:test 1})
+      (is (= {:n 4} (c-take fc))))))

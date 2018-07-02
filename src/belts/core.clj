@@ -118,3 +118,13 @@
   (let [out (chan)]
     (onto-chan out coll)
     out))
+
+(defn fun-cache-meat [msg {:keys [compo cache]}]
+  (if (= msg (:msg @cache))
+    (:res @cache)
+    (let [res (rpc compo msg)]
+      (reset! cache {:msg msg :res res})
+      res)))
+
+(defn fun-cache [c]
+  (component fun-cache-meat {:compo c :cache (atom {})}))
