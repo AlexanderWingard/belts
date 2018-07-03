@@ -100,6 +100,10 @@
       (recur))
     {:in in :out out}))
 
+(defn slider []
+  (let [c (chan (sliding-buffer 1))]
+    {:in c :out c}))
+
 (defn ticker [interval]
   (let [c (chan)]
     (go-loop [n 0]
