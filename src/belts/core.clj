@@ -81,7 +81,7 @@
   c)
 
 (defn printer []
-  (component (fn [msg] (println msg) msg)))
+  (component (fn [msg] (println (apply str (take 100 (str msg)))) msg)))
 
 (defn cloner []
   (let [in (chan)
