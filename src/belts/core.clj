@@ -54,14 +54,14 @@
 
 (defn read-with-timeout [compo]
   (let [out (:out compo)
-        [value channel] (alts!! [out (timeout 10)])]
+        [value channel] (alts!! [out (timeout 1500)])]
     (if (= channel out)
       value
       (throw-timeout))))
 
 (defn put-with-timeout [compo v]
   (let [out (go (>! (:in compo) v))
-        [value channel] (alts!! [out (timeout 10)])]
+        [value channel] (alts!! [out (timeout 1500)])]
     (if (not= channel out)
       (throw-timeout))))
 

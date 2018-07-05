@@ -1,8 +1,8 @@
 (ns belts.core-test
-  (:require [clojure.test :refer :all]
-            [clojure.core.async :refer [onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult]
-             :as as]
-            [belts.core :refer :all]))
+  (:require
+   [belts.core :refer :all]
+   [clojure.core.async :refer [offer! onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult] :as as]
+   [clojure.test :refer :all]))
 
 (defn times-m [{:keys [n]} {:keys [m]}]
   "A component that multiplies m and n"
@@ -23,11 +23,24 @@
 (defn inc-meat [msg {:keys [state]}]
   {:n (swap! state inc)})
 
+(defn inc-no-cfg []
+  (component
+   (let [state (atom 0)]
+     (fn [msg]
+       {:n (swap! state inc)}))))
+
 (defn c-put [c msg]
-  (as/>!! (:in c) msg))
+  (>!! (:in c) msg))
 
 (defn c-take [c]
-  (as/<!! (:out c)))
+  (<!! (:out c)))
+
+(deftest fun-compo-test
+  (let [c (inc-no-cfg)]
+    (c-put c {})
+    (is (= {:n 1} (c-take c)))
+    (c-put c {})
+    (is (= {:n 2} (c-take c)))))
 
 (deftest compo-test
   (testing "graph"
@@ -60,7 +73,7 @@
           (is (= {:n 10} (c-take c2)))
           (dotimes [n 3]
             (c-put c1 {:n 10}))
-          (is (= nil (as/offer! (:in c1) {:n 10})))
+          (is (= nil (offer! (:in c1) {:n 10})))
           (dotimes [n 3]
             (c-take c2))
           (dead-end c2)
