@@ -30,18 +30,20 @@
   (let [in (chan)
         out (chan)]
     (go-loop []
-      (when-let [msg (<! in)]
-        (validate ::msg-in msg meat)
-        (let [msg-wo-from (dissoc msg ::from)
-              return (if (some? cfg)
-                       (meat msg-wo-from cfg)
-                       (meat msg-wo-from))
-              return-to (get msg ::from out)]
-          (validate ::msg-out return meat)
-          (cond
-            (channel? return) (pipe return return-to false)
-            (some? return) (>! return-to return)))
-        (recur)))
+      (if-let [msg (<! in)]
+        (do
+          (validate ::msg-in msg meat)
+          (let [msg-wo-from (dissoc msg ::from)
+                return (if (some? cfg)
+                         (meat msg-wo-from cfg)
+                         (meat msg-wo-from))
+                return-to (get msg ::from out)]
+            (validate ::msg-out return meat)
+            (cond
+              (channel? return) (pipe return return-to false)
+              (some? return) (>! return-to return)))
+          (recur))
+        (close! out)))
     {:in in :out out}))
 
 (defn shutdown [{:keys [in out] :as c}]
@@ -73,7 +75,7 @@
           [from to] (partition 2 1 thread)]
     (validate ::component from)
     (validate ::component to)
-    ((if (mult? (:out from)) tap pipe) (:out from) (:in to) false))
+    ((if (mult? (:out from)) tap pipe) (:out from) (:in to) true))
   {:in (:in (first (first g))) :out (:out (last (last g)))})
 
 (defn dead-end [{:keys [out] :as c}]
@@ -105,12 +107,16 @@
     {:in c :out c}))
 
 (defn ticker [interval]
-  (let [c (chan)]
+  (let [in (chan)
+        out (chan)]
     (go-loop [n 0]
-      (>! c {:tick n})
-      (<! (timeout interval))
-      (recur (inc n)))
-    {:in c :out c}))
+      (>! out {:tick n})
+      (let [t-o (timeout interval)
+            [val from] (alts! [in t-o])]
+        (if (= from t-o)
+          (recur (inc n))
+          (close! out))))
+    {:in in :out out}))
 
 (defn rpc [compo args]
   (let [self (chan)

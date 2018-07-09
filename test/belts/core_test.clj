@@ -111,3 +111,9 @@
       (is (= {:n 3} (c-take fc)))
       (c-put fc {:test 1})
       (is (= {:n 4} (c-take fc))))))
+
+(deftest ticker-test
+  (let [c (ticker 1000)]
+    (is (= {:tick 0} (c-take c)))
+    (shutdown c)
+    (is (= nil (c-take c)))))
