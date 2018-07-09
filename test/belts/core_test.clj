@@ -1,7 +1,7 @@
 (ns belts.core-test
   (:require
    [belts.core :refer :all]
-   [clojure.core.async :refer [offer! onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult] :as as]
+   [clojure.core.async :refer [poll! offer! onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult] :as as]
    [clojure.test :refer :all]))
 
 (defn times-m [{:keys [n]} {:keys [m]}]
@@ -95,8 +95,9 @@
               d (debouncer 1)
               g (graph [[c d]])]
           (c-put g {})
-          (is (= {:n 0} (c-take g)))
-          (is (= {:n 9} (c-take g)))))
+          (is (some? (c-take g)))
+          (is (some? (c-take g)))
+          (is (nil? (poll! (:out g))))))
   (testing "fun-cache"
     (let [c (component inc-meat {:state (atom 0)})
           fc (fun-cache c)]
