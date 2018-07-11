@@ -1,5 +1,5 @@
 (ns belts.core
-  (:require [clojure.core.async :refer [sliding-buffer onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! go-loop go mult tap]]
+  (:require [clojure.core.async :refer [sliding-buffer onto-chan close! pipe chan <!! <! >! >!! timeout alts! alts!! poll! go-loop go mult tap]]
             [clojure.spec.alpha :as s]))
 
 (defn channel?
@@ -102,6 +102,21 @@
           (>! out msg)
           (<! (timeout interval))
           (recur))
+        (close! out)))
+    {:in in :out out}))
+
+(defn stabilizer [interval]
+  (let [in (chan (sliding-buffer 1))
+        out (chan)]
+    (go-loop [msg (<! in)]
+      (if (some? msg)
+        (do
+          (<! (timeout interval))
+          (if-some [new-msg (poll! in)]
+            (recur new-msg)
+            (do
+              (>! out msg)
+              (recur (<! in)))))
         (close! out)))
     {:in in :out out}))
 

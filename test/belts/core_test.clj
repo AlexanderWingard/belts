@@ -117,3 +117,10 @@
     (is (= {:tick 0} (c-take c)))
     (shutdown c)
     (is (= nil (c-take c)))))
+
+(deftest stabilizer-test
+  (let [c (stabilizer 1)]
+    (give-coll-to-component c [{:n 1} {:n 2} {:n 3} {:n 4}])
+    (is (= {:n 4} (c-take c)))
+    (give-coll-to-component c [{:n 5} {:n 6} {:n 7} {:n 8}])
+    (is (= {:n 8} (c-take c)))))
