@@ -97,9 +97,12 @@
   (let [in (chan (sliding-buffer 1))
         out (chan)]
     (go-loop []
-      (>! out (<! in))
-      (<! (timeout interval))
-      (recur))
+      (if-let [msg (<! in)]
+        (do
+          (>! out msg)
+          (<! (timeout interval))
+          (recur))
+        (close! out)))
     {:in in :out out}))
 
 (defn slider []
